@@ -49,27 +49,44 @@ export function createTestApi(): NavScopeTestApi {
     adapter,
   })
 
-  let scope: NavigationScope<NavigationApiTarget> | undefined
+  /**
+   * begin() 직후에는 아직 history entry에
+   * scope metadata가 존재하지 않는다.
+   *
+   * 첫 scoped navigation 전까지만
+   * 임시 handle을 유지한다.
+   */
+  let pendingScope: NavigationScope<NavigationApiTarget> | undefined
 
-  const snapshot = (): TestSnapshot => ({
-    current: adapter.current(),
+  const resolveScope = () => {
+    return pendingScope ?? nav.current()
+  }
 
-    entries: adapter.entries(),
+  const snapshot = (): TestSnapshot => {
+    const scope = resolveScope()
 
-    scope: scope
-      ? {
-          id: scope.id,
-          anchorKey: scope.anchorKey,
+    return {
+      current: adapter.current(),
 
-          canBack: scope.canBack,
-          canForward: scope.canForward,
+      entries: adapter.entries(),
 
-          entries: scope.entries(),
-        }
-      : undefined,
-  })
+      scope: scope
+        ? {
+            id: scope.id,
+            anchorKey: scope.anchorKey,
+
+            canBack: scope.canBack,
+            canForward: scope.canForward,
+
+            entries: scope.entries(),
+          }
+        : undefined,
+    }
+  }
 
   const getScope = () => {
+    const scope = resolveScope()
+
     if (!scope) {
       throw new Error('No navigation scope has been started.')
     }
@@ -81,19 +98,31 @@ export function createTestApi(): NavScopeTestApi {
     snapshot,
 
     begin() {
-      scope = nav.begin()
+      pendingScope = nav.begin()
 
       return snapshot()
     },
 
     async push(url) {
-      await getScope().push(url)
+      const scope = getScope()
+
+      await scope.push(url)
+
+      /**
+       * 첫 push 이후 scope metadata는
+       * current history entry에서 복원 가능하다.
+       */
+      pendingScope = undefined
 
       return snapshot()
     },
 
     async replace(url) {
-      await getScope().replace(url)
+      const scope = getScope()
+
+      await scope.replace(url)
+
+      pendingScope = undefined
 
       return snapshot()
     },
@@ -117,7 +146,11 @@ export function createTestApi(): NavScopeTestApi {
     },
 
     async exit() {
-      await getScope().exit()
+      const scope = getScope()
+
+      await scope.exit()
+
+      pendingScope = undefined
 
       return snapshot()
     },

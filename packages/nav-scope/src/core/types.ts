@@ -19,10 +19,18 @@ export interface NavScopeEntryMetadata {
 }
 
 export interface NavigationEntry {
+  /**
+   * History list 안의 slot identity.
+   *
+   * replace navigation에서는 동일한 key가 유지될 수 있다.
+   */
   readonly key: EntryKey
 
   readonly url: string | null
 
+  /**
+   * 현재 adapter가 노출하는 history entry 목록에서의 위치.
+   */
   readonly index: number
 
   readonly navScope?: NavScopeEntryMetadata
@@ -80,6 +88,20 @@ export interface NavigationScope<TTarget> {
 
 export interface NavigationScopeManager<TTarget> {
   begin(options?: ScopeOptions): NavigationScope<TTarget>
+
+  /**
+   * 현재 history entry에 속한 가장 안쪽 scope.
+   *
+   * 현재 entry가 어떤 scope에도 속하지 않으면 undefined.
+   */
+  current(): NavigationScope<TTarget> | undefined
+
+  /**
+   * 현재 history entry에 속한 scope들.
+   *
+   * outer → inner 순서.
+   */
+  scopes(): readonly NavigationScope<TTarget>[]
 
   subscribe(listener: () => void): () => void
 }

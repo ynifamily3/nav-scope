@@ -17,15 +17,7 @@ interface CreateNavigationScopesOptions<TTarget> {
 export function createNavigationScopes<TTarget>({
   adapter,
 }: CreateNavigationScopesOptions<TTarget>): NavigationScopeManager<TTarget> {
-  let scopeSequence = 0
-
-  const createScopeId = (): ScopeId => {
-    scopeSequence += 1
-
-    return `scope-${scopeSequence}`
-  }
-
-  const createScope = (
+  const createNewScope = (
     anchorKey: EntryKey,
     parent: NavigationScopeImpl<TTarget> | undefined,
     options: ScopeOptions,
@@ -55,20 +47,68 @@ export function createNavigationScopes<TTarget>({
         : {}),
     }
 
-    const path = parent ? [...parent.scopePath, frame] : [frame]
+    const scopePath = parent ? [...parent.scopePath, frame] : [frame]
 
     return new NavigationScopeImpl({
       adapter,
       frame,
-      scopePath: path,
+      scopePath,
       parent,
-      createScope,
+      createScope: createNewScope,
     })
+  }
+
+  const reconstructScopes = (frames: readonly ScopeFrame[]): NavigationScopeImpl<TTarget>[] => {
+    const scopes: NavigationScopeImpl<TTarget>[] = []
+
+    for (let index = 0; index < frames.length; index += 1) {
+      const frame = frames[index]
+
+      if (!frame) {
+        continue
+      }
+
+      const parent = scopes[scopes.length - 1]
+
+      const scopePath = frames.slice(0, index + 1)
+
+      scopes.push(
+        new NavigationScopeImpl({
+          adapter,
+          frame,
+          scopePath,
+          parent,
+          createScope: createNewScope,
+        }),
+      )
+    }
+
+    return scopes
+  }
+
+  const reconstructCurrentScopes = () => {
+    const frames = adapter.current().navScope?.scopes
+
+    if (!frames?.length) {
+      return []
+    }
+
+    return reconstructScopes(frames)
   }
 
   return {
     begin(options = {}) {
-      return createScope(adapter.current().key, undefined, options)
+      return createNewScope(adapter.current().key, undefined, options)
+    },
+
+    current() {
+      const scopes = reconstructCurrentScopes()
+
+      return scopes.at(-1)
+    },
+
+    scopes() {
+      return reconstructCurrentScopes()
     },
 
     subscribe(listener) {
@@ -140,6 +180,7 @@ class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
 
   get canForward(): boolean {
     const entries = this.#adapter.entries()
+
     const current = this.#adapter.current()
 
     const currentIsAnchor = current.key === this.anchorKey
@@ -193,6 +234,7 @@ class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
 
   async forward(): Promise<boolean> {
     const entries = this.#adapter.entries()
+
     const current = this.#adapter.current()
 
     const currentIsAnchor = current.key === this.anchorKey
@@ -236,4 +278,12 @@ class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
   #containsScope(entry: NavigationEntry): boolean {
     return entry.navScope?.scopes.some((scope) => scope.id === this.id) ?? false
   }
+}
+
+function createScopeId(): ScopeId {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return ['scope', Date.now().toString(36), Math.random().toString(36).slice(2)].join('-')
 }

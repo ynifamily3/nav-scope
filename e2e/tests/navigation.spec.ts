@@ -77,3 +77,67 @@ test('round-trips scope metadata through Navigation API state', async ({ page })
     ],
   })
 })
+
+test('reconstructs the current scope after reload', async ({ page }) => {
+  const before = await page.evaluate(() => {
+    return window.__navScopeTest.begin().scope
+  })
+
+  expect(before).toBeDefined()
+
+  await page.evaluate(() => window.__navScopeTest.push('/b'))
+
+  await page.evaluate(() => window.__navScopeTest.push('/c'))
+
+  await expect(page).toHaveURL('/c')
+
+  const beforeReload = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot().scope
+  })
+
+  expect(beforeReload?.id).toBe(before?.id)
+
+  /**
+   * JS runtime은 여기서 완전히 새로 만들어진다.
+   */
+  await page.reload()
+
+  await expect(page).toHaveURL('/c')
+
+  const afterReload = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot().scope
+  })
+
+  expect(afterReload).toBeDefined()
+
+  expect(afterReload?.id).toBe(beforeReload?.id)
+
+  expect(afterReload?.anchorKey).toBe(beforeReload?.anchorKey)
+
+  expect(
+    afterReload?.entries.map((entry) => {
+      if (!entry.url) {
+        return null
+      }
+
+      return new URL(entry.url).pathname
+    }),
+  ).toEqual(['/b', '/c'])
+
+  /**
+   * reload 전에 생성했던 Scope 객체는
+   * 이미 사라졌다.
+   *
+   * 그런데 history metadata에서 복원된
+   * 새 Scope 객체로 exit할 수 있어야 한다.
+   */
+  await page.evaluate(() => window.__navScopeTest.exit())
+
+  await expect(page).toHaveURL('/a')
+
+  const finalScope = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot().scope
+  })
+
+  expect(finalScope).toBeUndefined()
+})
