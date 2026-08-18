@@ -1,3 +1,16 @@
 {
-  "cSpell.words": ["attw", "miel", "oxfmt", "oxlint"]
+  "cSpell.words": ["attw", "miel", "oxfmt", "oxlint"],
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "vscode.markdown-language-features",
+    "editor.formatOnSave": true
+  }
 }

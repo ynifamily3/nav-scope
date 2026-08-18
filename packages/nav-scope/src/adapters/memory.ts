@@ -4,28 +4,26 @@ import type {
   NavigationEntry,
   NavigationOperation,
   NavScopeEntryMetadata,
-} from "../core/types";
+} from '../core/types'
 
 interface MemoryEntry {
-  readonly key: EntryKey;
-  readonly url: string;
-  readonly navScope?: NavScopeEntryMetadata;
+  readonly key: EntryKey
+  readonly url: string
+  readonly navScope?: NavScopeEntryMetadata
 }
 
-export function createMemoryNavigation(
-  initialUrl = "/",
-): NavigationAdapter<string> {
-  return new MemoryNavigationAdapter(initialUrl);
+export function createMemoryNavigation(initialUrl = '/'): NavigationAdapter<string> {
+  return new MemoryNavigationAdapter(initialUrl)
 }
 
 class MemoryNavigationAdapter implements NavigationAdapter<string> {
-  #entries: MemoryEntry[];
+  #entries: MemoryEntry[]
 
-  #currentIndex = 0;
+  #currentIndex = 0
 
-  #entrySequence = 0;
+  #entrySequence = 0
 
-  readonly #listeners = new Set<() => void>();
+  readonly #listeners = new Set<() => void>()
 
   constructor(initialUrl: string) {
     this.#entries = [
@@ -33,81 +31,78 @@ class MemoryNavigationAdapter implements NavigationAdapter<string> {
         key: this.#createEntryKey(),
         url: initialUrl,
       },
-    ];
+    ]
   }
 
   current(): NavigationEntry {
-    return this.#toPublicEntry(this.#currentIndex);
+    return this.#toPublicEntry(this.#currentIndex)
   }
 
   entries(): readonly NavigationEntry[] {
-    return this.#entries.map((_, index) => this.#toPublicEntry(index));
+    return this.#entries.map((_, index) => this.#toPublicEntry(index))
   }
 
   push(target: string, metadata: NavScopeEntryMetadata): NavigationOperation {
-    this.#entries = this.#entries.slice(0, this.#currentIndex + 1);
+    this.#entries = this.#entries.slice(0, this.#currentIndex + 1)
 
     this.#entries.push({
       key: this.#createEntryKey(),
       url: target,
       navScope: cloneMetadata(metadata),
-    });
+    })
 
-    this.#currentIndex = this.#entries.length - 1;
+    this.#currentIndex = this.#entries.length - 1
 
-    this.#emit();
+    this.#emit()
 
-    return completedOperation();
+    return completedOperation()
   }
 
-  replace(
-    target: string,
-    metadata: NavScopeEntryMetadata,
-  ): NavigationOperation {
-    const current = this.#entries[this.#currentIndex];
+  replace(target: string, metadata: NavScopeEntryMetadata): NavigationOperation {
+    const current = this.#entries[this.#currentIndex]
 
     if (!current) {
-      throw new Error("Current navigation entry does not exist.");
+      throw new Error('Current navigation entry does not exist.')
     }
 
     this.#entries[this.#currentIndex] = {
       key: current.key,
       url: target,
       navScope: cloneMetadata(metadata),
-    };
+    }
 
-    this.#emit();
+    this.#emit()
 
-    return completedOperation();
+    return completedOperation()
   }
 
   traverseTo(key: EntryKey): NavigationOperation {
-    const index = this.#entries.findIndex((entry) => entry.key === key);
+    const index = this.#entries.findIndex((entry) => entry.key === key)
 
     if (index === -1) {
-      throw new Error(`Navigation entry not found: ${key}`);
+      throw new Error(`Navigation entry not found: ${key}`)
     }
 
-    this.#currentIndex = index;
+    this.#currentIndex = index
 
-    this.#emit();
+    this.#emit()
 
-    return completedOperation();
+    return completedOperation()
   }
 
   subscribe(listener: () => void): () => void {
-    this.#listeners.add(listener);
+    this.#listeners.add(listener)
 
     return () => {
-      this.#listeners.delete(listener);
-    };
+      this.#listeners.delete(listener)
+    }
   }
 
   #toPublicEntry(index: number): NavigationEntry {
-    const entry = this.#entries[index];
+    const entry = this.#entries[index]
 
     if (!entry) {
-      throw new Error(`Navigation entry does not exist at index ${index}.`);
+      throw new Error(`Navigation entry does not exist at index ${index}.`)
     }
 
     return {
@@ -120,29 +115,29 @@ class MemoryNavigationAdapter implements NavigationAdapter<string> {
             navScope: cloneMetadata(entry.navScope),
           }
         : {}),
-    };
+    }
   }
 
   #createEntryKey(): EntryKey {
-    this.#entrySequence += 1;
+    this.#entrySequence += 1
 
-    return `entry-${this.#entrySequence}`;
+    return `entry-${this.#entrySequence}`
   }
 
   #emit(): void {
     for (const listener of this.#listeners) {
-      listener();
+      listener()
     }
   }
 }
 
 function completedOperation(): NavigationOperation {
-  const completed = Promise.resolve();
+  const completed = Promise.resolve()
 
   return {
     committed: completed,
     finished: completed,
-  };
+  }
 }
 
 function cloneMetadata(metadata: NavScopeEntryMetadata): NavScopeEntryMetadata {
@@ -150,5 +145,5 @@ function cloneMetadata(metadata: NavScopeEntryMetadata): NavScopeEntryMetadata {
     version: metadata.version,
 
     scopes: metadata.scopes.map((scope) => ({ ...scope })),
-  };
+  }
 }

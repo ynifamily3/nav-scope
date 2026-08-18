@@ -1,6 +1,6 @@
-export { createNavigationScopes } from "./core/create-navigation-scopes";
+export { createNavigationScopes } from './core/create-navigation-scopes'
 
-export { createMemoryNavigation } from "./adapters/memory";
+export { createMemoryNavigation } from './adapters/memory'
 
 export type {
   EntryKey,
@@ -13,4 +13,4 @@ export type {
   ScopeFrame,
   ScopeId,
   ScopeOptions,
-} from "./core/types";
+} from './core/types'

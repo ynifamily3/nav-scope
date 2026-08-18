@@ -1,21 +1,21 @@
-export type EntryKey = string;
+export type EntryKey = string
 
-export type ScopeId = string;
+export type ScopeId = string
 
 export interface ScopeFrame {
-  readonly id: ScopeId;
-  readonly anchorKey: EntryKey;
+  readonly id: ScopeId
+  readonly anchorKey: EntryKey
 
-  readonly parentScopeId?: ScopeId;
+  readonly parentScopeId?: ScopeId
 
-  readonly kind?: string;
-  readonly label?: string;
+  readonly kind?: string
+  readonly label?: string
 }
 
 export interface NavScopeEntryMetadata {
-  readonly version: 1;
+  readonly version: 1
 
-  readonly scopes: readonly ScopeFrame[];
+  readonly scopes: readonly ScopeFrame[]
 }
 
 export interface NavigationEntry {
@@ -24,73 +24,70 @@ export interface NavigationEntry {
    *
    * replace navigation에서는 동일한 key가 유지될 수 있다.
    */
-  readonly key: EntryKey;
+  readonly key: EntryKey
 
-  readonly url: string;
+  readonly url: string
 
   /**
    * 현재 adapter가 노출하는 history entry 목록에서의 위치.
    */
-  readonly index: number;
+  readonly index: number
 
-  readonly navScope?: NavScopeEntryMetadata;
+  readonly navScope?: NavScopeEntryMetadata
 }
 
 export interface NavigationOperation {
-  readonly committed: Promise<void>;
-  readonly finished: Promise<void>;
+  readonly committed: Promise<void>
+  readonly finished: Promise<void>
 }
 
 export interface NavigationAdapter<TTarget> {
-  current(): NavigationEntry;
+  current(): NavigationEntry
 
-  entries(): readonly NavigationEntry[];
+  entries(): readonly NavigationEntry[]
 
-  push(target: TTarget, metadata: NavScopeEntryMetadata): NavigationOperation;
+  push(target: TTarget, metadata: NavScopeEntryMetadata): NavigationOperation
 
-  replace(
-    target: TTarget,
-    metadata: NavScopeEntryMetadata,
-  ): NavigationOperation;
+  replace(target: TTarget, metadata: NavScopeEntryMetadata): NavigationOperation
 
-  traverseTo(key: EntryKey): NavigationOperation;
+  traverseTo(key: EntryKey): NavigationOperation
 
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: () => void): () => void
 }
 
 export interface ScopeOptions {
-  readonly id?: ScopeId;
-  readonly kind?: string;
-  readonly label?: string;
+  readonly id?: ScopeId
+  readonly kind?: string
+  readonly label?: string
 }
 
 export interface NavigationScope<TTarget> {
-  readonly id: ScopeId;
+  readonly id: ScopeId
 
-  readonly anchorKey: EntryKey;
+  readonly anchorKey: EntryKey
 
-  readonly parent: NavigationScope<TTarget> | undefined;
+  readonly parent: NavigationScope<TTarget> | undefined
 
-  readonly canBack: boolean;
-  readonly canForward: boolean;
+  readonly canBack: boolean
+  readonly canForward: boolean
 
-  entries(): readonly NavigationEntry[];
+  entries(): readonly NavigationEntry[]
 
-  push(target: TTarget): Promise<void>;
+  push(target: TTarget): Promise<void>
 
-  replace(target: TTarget): Promise<void>;
+  replace(target: TTarget): Promise<void>
 
-  back(): Promise<boolean>;
+  back(): Promise<boolean>
 
-  forward(): Promise<boolean>;
+  forward(): Promise<boolean>
 
-  exit(): Promise<void>;
+  exit(): Promise<void>
 
-  begin(options?: ScopeOptions): NavigationScope<TTarget>;
+  begin(options?: ScopeOptions): NavigationScope<TTarget>
 }
 
 export interface NavigationScopeManager<TTarget> {
-  begin(options?: ScopeOptions): NavigationScope<TTarget>;
+  begin(options?: ScopeOptions): NavigationScope<TTarget>
 
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: () => void): () => void
 }

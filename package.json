@@ -11,5 +11,10 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "typescript": "^7.0.2"
   }
 }
