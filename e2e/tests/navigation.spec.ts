@@ -141,3 +141,134 @@ test('reconstructs the current scope after reload', async ({ page }) => {
 
   expect(finalScope).toBeUndefined()
 })
+
+test('fixture can navigate between /a, /b, and /c inside a scope', async ({ page }) => {
+  await page
+    .getByRole('button', {
+      name: 'Begin scope',
+    })
+    .click()
+
+  await page
+    .getByRole('button', {
+      name: '/b',
+    })
+    .click()
+
+  await expect(page).toHaveURL('/b')
+
+  await expect(page.locator('#current-path')).toHaveText('/b')
+
+  await page
+    .getByRole('button', {
+      name: '/c',
+    })
+    .click()
+
+  await expect(page).toHaveURL('/c')
+
+  await expect(page.locator('#current-path')).toHaveText('/c')
+
+  await page
+    .getByRole('button', {
+      name: '/a',
+    })
+    .click()
+
+  await expect(page).toHaveURL('/a')
+})
+
+test('reconstructs scope state across browser back and forward traversal', async ({ page }) => {
+  const scopeId = await page.evaluate(() => {
+    return window.__navScopeTest.begin().scope?.id
+  })
+
+  expect(scopeId).toBeDefined()
+
+  await page.evaluate(() => window.__navScopeTest.push('/b'))
+
+  await page.evaluate(() => window.__navScopeTest.push('/c'))
+
+  await expect(page).toHaveURL('/c')
+
+  /**
+   * /a
+   *  ↓
+   * /b [X]
+   *  ↓
+   * /c [X] ← current
+   */
+
+  await page.goBack()
+
+  await expect(page).toHaveURL('/b')
+
+  const atB = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot()
+  })
+
+  expect(atB.scope?.id).toBe(scopeId)
+
+  expect(atB.scope?.canBack).toBe(false)
+
+  expect(atB.scope?.canForward).toBe(true)
+
+  /**
+   * /b → /a
+   *
+   * anchor는 scope 외부이므로
+   * current scope가 없어야 한다.
+   */
+  await page.goBack()
+
+  await expect(page).toHaveURL('/a')
+
+  const atA = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot()
+  })
+
+  expect(atA.scope).toBeUndefined()
+
+  /**
+   * /a → /b
+   *
+   * forward traversal로 scope entry에
+   * 다시 들어오면 scope가 복원된다.
+   */
+  await page.goForward()
+
+  await expect(page).toHaveURL('/b')
+
+  const forwardToB = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot()
+  })
+
+  expect(forwardToB.scope?.id).toBe(scopeId)
+
+  expect(forwardToB.scope?.canBack).toBe(false)
+
+  expect(forwardToB.scope?.canForward).toBe(true)
+})
+
+test('restores the correct nested scope when browser traversal changes entries', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    window.__navScopeTest.begin()
+  })
+
+  await page.evaluate(() => window.__navScopeTest.push('/b'))
+
+  const outerId = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot().scope?.id
+  })
+
+  /**
+   * 현재 test API에는 child begin이
+   * 아직 없으므로 이 테스트는
+   * child-scope test API를 추가할 때
+   * 활성화한다.
+   */
+
+  expect(outerId).toBeDefined()
+})

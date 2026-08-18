@@ -23,6 +23,8 @@ export interface TestSnapshot {
 export interface NavScopeTestApi {
   snapshot(): TestSnapshot
 
+  subscribe(listener: () => void): () => void
+
   begin(): TestSnapshot
 
   push(url: string): Promise<TestSnapshot>
@@ -50,11 +52,9 @@ export function createTestApi(): NavScopeTestApi {
   })
 
   /**
-   * begin() 직후에는 아직 history entry에
-   * scope metadata가 존재하지 않는다.
-   *
+   * begin() 자체는 history를 변경하지 않으므로
    * 첫 scoped navigation 전까지만
-   * 임시 handle을 유지한다.
+   * runtime handle이 필요하다.
    */
   let pendingScope: NavigationScope<NavigationApiTarget> | undefined
 
@@ -97,6 +97,10 @@ export function createTestApi(): NavScopeTestApi {
   return {
     snapshot,
 
+    subscribe(listener) {
+      return nav.subscribe(listener)
+    },
+
     begin() {
       pendingScope = nav.begin()
 
@@ -108,10 +112,6 @@ export function createTestApi(): NavScopeTestApi {
 
       await scope.push(url)
 
-      /**
-       * 첫 push 이후 scope metadata는
-       * current history entry에서 복원 가능하다.
-       */
       pendingScope = undefined
 
       return snapshot()

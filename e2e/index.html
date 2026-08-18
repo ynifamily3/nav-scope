@@ -1,20 +1,115 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>nav-scope e2e</title>
+    <title>nav-scope fixture</title>
+
+    <script type="module" src="/src/main.ts"></script>
   </head>
 
   <body>
-    <main>
-      <h1>nav-scope e2e fixture</h1>
+    <main class="container">
+      <header>
+        <h1>nav-scope fixture</h1>
 
-      <iframe id="child-frame" title="child frame" src="/iframe.html"></iframe>
+        <p>
+          Current page:
+          <strong id="page-name"></strong>
+        </p>
+
+        <p>
+          URL:
+          <code id="current-path"></code>
+        </p>
+      </header>
+
+      <section>
+        <h2>Scope</h2>
+
+        <div class="controls">
+          <button type="button" data-action="begin">Begin scope</button>
+
+          <button type="button" data-action="back">Scope Back</button>
+
+          <button type="button" data-action="forward">Scope Forward</button>
+
+          <button type="button" data-action="exit">Exit scope</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Scoped navigation</h2>
+
+        <p>
+          These use
+          <code>scope.push()</code>.
+        </p>
+
+        <div class="controls">
+          <button type="button" data-route="/a">/a</button>
+
+          <button type="button" data-route="/b">/b</button>
+
+          <button type="button" data-route="/c">/c</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Native navigation</h2>
+
+        <p>These are ordinary links and intentionally bypass nav-scope.</p>
+
+        <nav class="controls">
+          <a href="/a"> /a </a>
+
+          <a href="/b"> /b </a>
+
+          <a href="/c"> /c </a>
+        </nav>
+      </section>
+
+      <section>
+        <h2>Current scope</h2>
+
+        <dl>
+          <dt>ID</dt>
+          <dd>
+            <code id="scope-id"> none </code>
+          </dd>
+
+          <dt>Anchor</dt>
+          <dd>
+            <code id="scope-anchor"> none </code>
+          </dd>
+
+          <dt>Can back</dt>
+          <dd id="scope-can-back">false</dd>
+
+          <dt>Can forward</dt>
+          <dd id="scope-can-forward">false</dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Navigation entries</h2>
+
+        <pre id="snapshot"></pre>
+      </section>
+
+      <section>
+        <h2>iframe fixture</h2>
+
+        <iframe
+          id="child-frame"
+          title="child frame"
+          src="/iframe.html"
+        ></iframe>
+      </section>
+
+      <p id="error" role="alert" hidden></p>
     </main>
-
-    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
