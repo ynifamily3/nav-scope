@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <title>nav-scope iframe fixture</title>
+  </head>
+
+  <body>
+    <p id="current-step"></p>
+
+    <nav>
+      <a href="/iframe.html?step=1" data-step="1"> Step 1 </a>
+
+      <a href="/iframe.html?step=2" data-step="2"> Step 2 </a>
+
+      <a href="/iframe.html?step=3" data-step="3"> Step 3 </a>
+    </nav>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+
+      const step = params.get("step") ?? "initial";
+
+      document.querySelector("#current-step").textContent = step;
+    </script>
+  </body>
+</html>
