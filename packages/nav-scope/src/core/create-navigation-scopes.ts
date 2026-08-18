@@ -1,3 +1,7 @@
+import { createNavigationScheduler } from './scheduler'
+
+import type { NavigationScheduler } from './scheduler'
+
 import type {
   EntryKey,
   NavigationAdapter,
@@ -17,6 +21,15 @@ interface CreateNavigationScopesOptions<TTarget> {
 export function createNavigationScopes<TTarget>({
   adapter,
 }: CreateNavigationScopesOptions<TTarget>): NavigationScopeManager<TTarget> {
+  /**
+   * Scope마다 하나가 아니라
+   * manager 전체가 하나의 scheduler를 공유한다.
+   *
+   * 그래야 nested scope끼리 navigation이
+   * 경쟁하지 않는다.
+   */
+  const scheduler = createNavigationScheduler()
+
   const createNewScope = (
     anchorKey: EntryKey,
     parent: NavigationScopeImpl<TTarget> | undefined,
@@ -51,6 +64,7 @@ export function createNavigationScopes<TTarget>({
 
     return new NavigationScopeImpl({
       adapter,
+      scheduler,
       frame,
       scopePath,
       parent,
@@ -75,6 +89,7 @@ export function createNavigationScopes<TTarget>({
       scopes.push(
         new NavigationScopeImpl({
           adapter,
+          scheduler,
           frame,
           scopePath,
           parent,
@@ -120,6 +135,8 @@ export function createNavigationScopes<TTarget>({
 interface NavigationScopeImplOptions<TTarget> {
   readonly adapter: NavigationAdapter<TTarget>
 
+  readonly scheduler: NavigationScheduler
+
   readonly frame: ScopeFrame
 
   readonly scopePath: readonly ScopeFrame[]
@@ -136,6 +153,8 @@ interface NavigationScopeImplOptions<TTarget> {
 class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
   readonly #adapter: NavigationAdapter<TTarget>
 
+  readonly #scheduler: NavigationScheduler
+
   readonly #frame: ScopeFrame
 
   readonly #parent: NavigationScopeImpl<TTarget> | undefined
@@ -146,12 +165,14 @@ class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
 
   constructor({
     adapter,
+    scheduler,
     frame,
     scopePath,
     parent,
     createScope,
   }: NavigationScopeImplOptions<TTarget>) {
     this.#adapter = adapter
+    this.#scheduler = scheduler
     this.#frame = frame
     this.scopePath = scopePath
     this.#parent = parent
@@ -204,64 +225,88 @@ class NavigationScopeImpl<TTarget> implements NavigationScope<TTarget> {
     return this.#adapter.entries().filter((entry) => this.#containsScope(entry))
   }
 
-  async push(target: TTarget): Promise<void> {
-    await this.#adapter.push(target, this.#metadata()).finished
+  push(target: TTarget): Promise<void> {
+    return this.#scheduler.schedule(async () => {
+      await this.#adapter.push(target, this.#metadata()).finished
+    })
   }
 
-  async replace(target: TTarget): Promise<void> {
-    await this.#adapter.replace(target, this.#metadata()).finished
+  replace(target: TTarget): Promise<void> {
+    return this.#scheduler.schedule(async () => {
+      await this.#adapter.replace(target, this.#metadata()).finished
+    })
   }
 
-  async back(): Promise<boolean> {
-    const entries = this.entries()
+  back(): Promise<boolean> {
+    return this.#scheduler.schedule(async () => {
+      /**
+       * 중요:
+       *
+       * target 계산 자체를 scheduler
+       * 안에서 수행한다.
+       *
+       * queue에 먼저 들어간 navigation이
+       * 끝난 뒤의 실제 current entry를
+       * 사용해야 하기 때문이다.
+       */
+      const entries = this.entries()
 
-    const currentIndex = entries.findIndex((entry) => entry.key === this.#adapter.current().key)
+      const currentIndex = entries.findIndex((entry) => entry.key === this.#adapter.current().key)
 
-    if (currentIndex <= 0) {
-      return false
-    }
+      if (currentIndex <= 0) {
+        return false
+      }
 
-    const target = entries[currentIndex - 1]
+      const target = entries[currentIndex - 1]
 
-    if (!target) {
-      return false
-    }
+      if (!target) {
+        return false
+      }
 
-    await this.#adapter.traverseTo(target.key).finished
+      await this.#adapter.traverseTo(target.key).finished
 
-    return true
+      return true
+    })
   }
 
-  async forward(): Promise<boolean> {
-    const entries = this.#adapter.entries()
+  forward(): Promise<boolean> {
+    return this.#scheduler.schedule(async () => {
+      const entries = this.#adapter.entries()
 
-    const current = this.#adapter.current()
+      const current = this.#adapter.current()
 
-    const currentIsAnchor = current.key === this.anchorKey
+      const currentIsAnchor = current.key === this.anchorKey
 
-    const currentIsInside = this.#containsScope(current)
+      const currentIsInside = this.#containsScope(current)
 
-    if (!currentIsAnchor && !currentIsInside) {
-      return false
-    }
+      if (!currentIsAnchor && !currentIsInside) {
+        return false
+      }
 
-    const target = entries[current.index + 1]
+      const target = entries[current.index + 1]
 
-    if (!target || !this.#containsScope(target)) {
-      return false
-    }
+      if (!target || !this.#containsScope(target)) {
+        return false
+      }
 
-    await this.#adapter.traverseTo(target.key).finished
+      await this.#adapter.traverseTo(target.key).finished
 
-    return true
+      return true
+    })
   }
 
-  async exit(): Promise<void> {
-    if (this.#adapter.current().key === this.anchorKey) {
-      return
-    }
+  exit(): Promise<void> {
+    return this.#scheduler.schedule(async () => {
+      /**
+       * exit 역시 실행 시점에
+       * current entry를 확인한다.
+       */
+      if (this.#adapter.current().key === this.anchorKey) {
+        return
+      }
 
-    await this.#adapter.traverseTo(this.anchorKey).finished
+      await this.#adapter.traverseTo(this.anchorKey).finished
+    })
   }
 
   begin(options: ScopeOptions = {}): NavigationScope<TTarget> {

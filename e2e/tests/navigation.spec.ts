@@ -272,3 +272,46 @@ test('restores the correct nested scope when browser traversal changes entries',
 
   expect(outerId).toBeDefined()
 })
+
+test('serializes programmatic navigation commands', async ({ page }) => {
+  await page.evaluate(() => {
+    window.__navScopeTest.begin()
+  })
+
+  await page.evaluate(async () => {
+    /**
+     * 일부러 하나도 await하지 않고
+     * 연속으로 호출한다.
+     */
+    const pushB = window.__navScopeTest.push('/b')
+
+    const pushC = window.__navScopeTest.push('/c')
+
+    const back = window.__navScopeTest.back()
+
+    await Promise.all([pushB, pushC, back])
+  })
+
+  /**
+   * 실행 순서:
+   *
+   * /a
+   *  ↓
+   * /b
+   *  ↓
+   * /c
+   *  ↓ back
+   * /b
+   */
+  await expect(page).toHaveURL('/b')
+
+  const snapshot = await page.evaluate(() => {
+    return window.__navScopeTest.snapshot()
+  })
+
+  expect(snapshot.scope).toBeDefined()
+
+  expect(snapshot.scope?.canBack).toBe(false)
+
+  expect(snapshot.scope?.canForward).toBe(true)
+})
