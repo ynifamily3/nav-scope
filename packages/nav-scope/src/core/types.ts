@@ -19,18 +19,10 @@ export interface NavScopeEntryMetadata {
 }
 
 export interface NavigationEntry {
-  /**
-   * History list 안의 slot identity.
-   *
-   * replace navigation에서는 동일한 key가 유지될 수 있다.
-   */
   readonly key: EntryKey
 
-  readonly url: string
+  readonly url: string | null
 
-  /**
-   * 현재 adapter가 노출하는 history entry 목록에서의 위치.
-   */
   readonly index: number
 
   readonly navScope?: NavScopeEntryMetadata
